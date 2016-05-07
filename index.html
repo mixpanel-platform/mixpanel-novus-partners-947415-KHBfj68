@@ -5,10 +5,133 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
+      
+      <style>
+          div {
+              margin: auto;
+              padding: 10px;
+          }
+          p {
+            margin: auto; padding: 10px;text-align: center;
+            font-family: SFUIDisplay-Regular;
+            font-size: 24px;
+            color: #4A90E2;
+            letter-spacing: -0.87px;
+            text-shadow: 1px -1px 2px rgba(0,0,0,0.50);
+          }
+          #mpLogo {margin-left:auto; margin-right:0; float:right}
+          
+          h1 {
+            margin: auto; text-align: center;
+            font-family: SFUIDisplay-Regular;
+            font-size: 18px;
+            color: #4A90E2;
+          }
+      
+      </style>
   </head>
+    
+<!--Usage by team-->
+<!--DAU, WAU, MAU-->
+<!--Active Users out of Total Users, minus @novus.com users-->
+    
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
+      <img src='https://www.novus.com/wp-content/uploads/2014/08/Logo-for-Web2.png' height='50' id='novusLogo'/>
+      <img src='http://www.tropical.io/wp-content/uploads/2014/04/mixpanel_500X1891.png' height='50' id='mpLogo'/>
+      <p>Chart 1: Unique Users by Company, past 3 months</p>
+      <div id='chart1'></div>
+      <p>Chart 2: DAU, WAU, MAU, Past 60 days </p>
+      <div id='chart2'></div>
+      <p>Chart 3: Active users out of Total users, minus @novus.com users</p>
+      <div id='chart3'></div>
+      
+      
+      
+      
     <script>
+        // MP.api.setCredentials('4e9210cb4257d1ff9b0c6f2eaf1cf73b');
+        function createTable() {
+            var promises = []
+//            var tableData = {}
+            var activeEvent = "Feature Usage"
+
+            var usageByTeam = new Promise(function(resolve,reject) {
+              MP.api.segment(activeEvent, 'Company / Org', {type: 'unique', from: moment().subtract(3, 'months'), unit: 'month'})
+                  .done(function(result) {      
+                    
+                    resolve(result.values())
+                    
+                })
+            });
+            usageByTeam.then(function(data){
+                $('#chart1').width('700px');
+                $('#chart1').MPTable({data:data, showPercentages:true, firstColHeader:'Client'});                                
+            });
+            
+            var kpis = {}
+            var kpiPromises = []
+            var dauPromise = new Promise(function(resolve,reject){            
+                MP.api.segment(activeEvent, undefined, {type: 'unique', from: moment().subtract(60, 'days'), unit: 'day'})
+                    .done(function(result){
+                        result = result.avg();
+                        kpis['DAU'] = Math.floor(result.values()[activeEvent])
+                        resolve();
+                    })            
+            })
+            var mauPromise = new Promise(function(resolve,reject){            
+                MP.api.segment(activeEvent, undefined, {type: 'unique', from: moment().subtract(60, 'days'), unit: 'month'})
+                    .done(function(result){
+                        result = result.avg();
+                        kpis['MAU'] = Math.floor(result.values()[activeEvent])
+                        resolve();
+                    })            
+            })
+            var wauPromise = new Promise(function(resolve,reject){            
+                MP.api.segment(activeEvent, undefined, {type: 'unique', from: moment().subtract(60, 'days'), unit: 'week'})
+                    .done(function(result){
+                        result = result.avg();
+                        kpis['WAU'] = Math.floor(result.values()[activeEvent])
+                        resolve();
+                    })            
+            })
+            kpiPromises.push(dauPromise)
+            kpiPromises.push(wauPromise)
+            kpiPromises.push(mauPromise)
+
+            
+            Promise.all(kpiPromises).then(function(data){
+                console.log(kpis)
+                $('#chart2').width('165px');
+                // $('#chart3').width('250px');
+                $('#chart2').MPTable({data:kpis});
+                $('#chart3').html('<h1>'+kpis['MAU']+' active users</h1><h1>'+161208+' total users</h1><h1> <span style="color: #E4852A;text-shadow: 1px -1px 2px rgba(0,0,0,0.50);">'+Math.round((kpis['MAU']/161208)*100)+'%</span> of users are active.</h1>')
+
+                
+
+            })
+
+          // var totalUsers = new Promise(function(resolve,reject){
+          //     MP.api.people().done(function(results){
+          //         resolve(results.values().total)
+          //     })
+          // })  
+//          var activeUsers = new Promise(function(resolve,reject){
+//              var currentEpoch = new Date().getTime();
+//              MP.api.people({where: '(datetime('+currentEpoch*1000+' - 5184000) < properties["$last_seen"] and datetime('+currentEpoch*1000+') >= properties["$last_seen"])'})
+//              .done(function(results){
+//                  console.log('filtered',results.values())
+//              })
+//          })
+          // totalUsers.then(function(result){
+                // $('#chart3').html('<h1>'+kpis['MAU']+' active users</h1><h1>'+result+' total users</h1><h1> <span style="color: #E4852A;text-shadow: 1px -1px 2px rgba(0,0,0,0.50);">'+Math.round((kpis['MAU']/result)*100)+'%</span> of users are active.</h1>')
+//              $('#chart3').width('250px');
+//              $('#chart3').MPTable({'data':{"1 Total Users": result, "2 Active Users": 5}})
+              
+          // })
+        };
+
+        
+      createTable();
       // Run queries and display results here
     </script>
   </body>
